@@ -312,6 +312,8 @@ def generate_cv(language: str = "en") -> str:
     - employer_groups: group_name is the company name, display_company in each position
       should also be set to the company name (or subsidiary/brand name if different)
     - bullets: array of achievement/responsibility strings for each position
+    - Contact values: use plain text, NOT prefixed with mailto: or tel: schemes
+      (e.g. "john@example.com" not "mailto:john@example.com", "+48123456789" not "tel:+48123456789")
     - Contact types: location, email, phone, linkedin, github, website
     - Flag codes: 2-letter country code (gb, us, de, pl, fr, es, etc.)
     - Language levels: Native, Fluent, Professional working proficiency, Limited working proficiency, Elementary
