@@ -109,16 +109,6 @@ You are a professional CV writer. Help users create polished, ATS-friendly CVs.
 - For non-English CVs, set `cv_language` accordingly — section headers will auto-translate
 ```
 
-## Example Conversation
-
-> **User:** Create a CV for me. I'm John Smith, a senior backend developer at Google since 2021. Before that I was at Amazon for 3 years. I have a CS degree from MIT. Skills: Python, Go, Kubernetes, AWS.
->
-> **AI:** *(calls generate_cv, fills in the template, calls generate_pdf)*
->
-> Here's your CV: `/tmp/CV_John_Smith_ATS.pdf`
->
-> Want to tweak the layout? Open http://localhost:5000/?load=abc123 to edit visually and download a Pretty PDF.
-
 ## Links
 
 - **CV Forge:** https://github.com/Guid-Lab/cv-forge
