@@ -16,6 +16,7 @@ LOCAL_URL = "http://localhost:5000"
 REMOTE_URL = "https://cv.guidlab.pl"
 
 _base_url: str | None = None
+_mode: str | None = None  # "local", "remote", or None (not yet chosen)
 
 mcp = FastMCP("cv-forge")
 
@@ -106,60 +107,76 @@ TEMPLATE = {
 }
 
 
-def _get_base_url() -> str:
-    """Return the active base URL, cached after first resolution."""
-    global _base_url
-    if _base_url:
-        return _base_url
+def _check_environment() -> dict:
+    """Detect what's available: local running, Docker, remote."""
+    info = {"local_running": False, "docker": False, "docker_image": False, "remote": False}
 
-    # Environment override
-    env_url = os.environ.get("CV_FORGE_URL", "").strip().rstrip("/")
-    if env_url:
-        _base_url = env_url
-        return _base_url
-
-    # Try local first
     try:
         r = httpx.get(f"{LOCAL_URL}/", timeout=3)
         if r.status_code == 200:
-            _base_url = LOCAL_URL
-            return _base_url
+            info["local_running"] = True
     except (httpx.ConnectError, httpx.TimeoutException):
         pass
 
-    # Try starting Docker container
-    if _try_start_container():
-        _base_url = LOCAL_URL
-        return _base_url
+    if shutil.which("docker"):
+        info["docker"] = True
+        result = subprocess.run(
+            ["docker", "images", "-q", IMAGE_NAME],
+            capture_output=True, text=True,
+        )
+        if result.returncode == 0 and result.stdout.strip():
+            info["docker_image"] = True
 
-    # Fall back to remote
     try:
         r = httpx.get(f"{REMOTE_URL}/", timeout=5)
         if r.status_code == 200:
-            _base_url = REMOTE_URL
-            return _base_url
+            info["remote"] = True
     except (httpx.ConnectError, httpx.TimeoutException):
         pass
 
+    return info
+
+
+def _get_base_url() -> str:
+    """Return the active base URL. Raises if not yet configured."""
+    if _base_url:
+        return _base_url
+
+    env_url = os.environ.get("CV_FORGE_URL", "").strip().rstrip("/")
+    if env_url:
+        return env_url
+
     raise RuntimeError(
-        "CV Forge unavailable. Install Docker and run: docker pull guidlab/cv-forge"
+        "CV Forge not configured. Call the cv_forge_setup tool first."
     )
 
 
-def _try_start_container() -> bool:
-    """Try to start a local Docker container. Returns True if successful."""
+def _start_local() -> bool:
+    """Start local Docker container. Pulls image if needed. Returns True on success."""
     if not shutil.which("docker"):
         return False
 
+    # Check if already running
     result = subprocess.run(
         ["docker", "inspect", "-f", "{{.State.Running}}", CONTAINER_NAME],
         capture_output=True, text=True,
     )
-    if result.returncode == 0 and result.stdout.strip() == "true":
-        pass
-    else:
+    if not (result.returncode == 0 and result.stdout.strip() == "true"):
         start = subprocess.run(["docker", "start", CONTAINER_NAME], capture_output=True)
         if start.returncode != 0:
+            # Pull image if not present
+            check = subprocess.run(
+                ["docker", "images", "-q", IMAGE_NAME],
+                capture_output=True, text=True,
+            )
+            if not check.stdout.strip():
+                pull = subprocess.run(
+                    ["docker", "pull", IMAGE_NAME],
+                    capture_output=True,
+                )
+                if pull.returncode != 0:
+                    return False
+
             try:
                 subprocess.run(
                     [
@@ -192,6 +209,82 @@ def _post_load_data(cv_data: dict) -> str:
     r = httpx.post(f"{base}/api/load-data", json=cv_data, timeout=10)
     r.raise_for_status()
     return r.json()["url"]
+
+
+@mcp.tool()
+def cv_forge_setup(mode: str = "auto") -> str:
+    """Set up CV Forge backend. MUST be called before generate_pdf or generate_docx.
+
+    Detects the environment and lets the user choose how to run CV Forge:
+    - "local": Run locally via Docker (pulls image if needed, ~1.7 GB)
+    - "remote": Use the hosted demo at cv.guidlab.pl (no install needed)
+    - "auto": Auto-detect — use local if Docker is available, otherwise remote
+
+    If mode is "auto", present the user with the available options and ask which
+    they prefer. If only one option is available, use it automatically.
+
+    Args:
+        mode: "local", "remote", or "auto" (default).
+    """
+    global _base_url, _mode
+
+    env_url = os.environ.get("CV_FORGE_URL", "").strip().rstrip("/")
+    if env_url:
+        _base_url = env_url
+        _mode = "custom"
+        return json.dumps({"status": "ready", "mode": "custom", "url": env_url})
+
+    info = _check_environment()
+
+    if mode == "remote":
+        if not info["remote"]:
+            return json.dumps({"status": "error", "message": "Remote server cv.guidlab.pl is not reachable."})
+        _base_url = REMOTE_URL
+        _mode = "remote"
+        return json.dumps({"status": "ready", "mode": "remote", "url": REMOTE_URL})
+
+    if mode == "local":
+        if info["local_running"]:
+            _base_url = LOCAL_URL
+            _mode = "local"
+            return json.dumps({"status": "ready", "mode": "local", "url": LOCAL_URL})
+        if not info["docker"]:
+            return json.dumps({"status": "error", "message": "Docker is not installed. Install Docker or use mode='remote'."})
+        if _start_local():
+            _base_url = LOCAL_URL
+            _mode = "local"
+            return json.dumps({"status": "ready", "mode": "local", "url": LOCAL_URL})
+        return json.dumps({"status": "error", "message": "Failed to start local container."})
+
+    # mode == "auto" — present options
+    if info["local_running"]:
+        _base_url = LOCAL_URL
+        _mode = "local"
+        return json.dumps({"status": "ready", "mode": "local", "url": LOCAL_URL,
+                           "message": "Using already running local instance."})
+
+    options = []
+    if info["docker"]:
+        if info["docker_image"]:
+            options.append({"mode": "local", "description": "Local Docker (image ready, fast startup)"})
+        else:
+            options.append({"mode": "local", "description": "Local Docker (needs to pull ~1.7 GB image first)"})
+    if info["remote"]:
+        options.append({"mode": "remote", "description": "Remote server cv.guidlab.pl (no install needed)"})
+
+    if not options:
+        return json.dumps({"status": "error",
+                           "message": "No backend available. Install Docker or check your internet connection."})
+
+    if len(options) == 1:
+        # Only one option — use it directly
+        return cv_forge_setup(mode=options[0]["mode"])
+
+    return json.dumps({
+        "status": "choose",
+        "message": "Ask the user which mode they prefer:",
+        "options": options,
+    })
 
 
 @mcp.tool()
