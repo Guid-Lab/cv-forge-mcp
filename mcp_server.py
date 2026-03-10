@@ -309,6 +309,8 @@ def generate_cv(language: str = "en") -> str:
 
     Template field reference:
     - Dates: 'Month YYYY' format (e.g. 'January 2023'), use 'Present' for current positions
+    - employer_groups: group_name is the company name, display_company in each position
+      should also be set to the company name (or subsidiary/brand name if different)
     - bullets: array of achievement/responsibility strings for each position
     - Contact types: location, email, phone, linkedin, github, website
     - Flag codes: 2-letter country code (gb, us, de, pl, fr, es, etc.)
