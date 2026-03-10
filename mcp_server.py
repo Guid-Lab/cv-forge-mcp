@@ -2,6 +2,7 @@
 
 import json
 import os
+import shutil
 import subprocess
 import tempfile
 import time
@@ -11,7 +12,10 @@ from mcp.server.fastmcp import FastMCP
 
 CONTAINER_NAME = "cv-forge"
 IMAGE_NAME = "guidlab/cv-forge"
-BASE_URL = "http://localhost:5000"
+LOCAL_URL = "http://localhost:5000"
+REMOTE_URL = "https://cv.guidlab.pl"
+
+_base_url: str | None = None
 
 mcp = FastMCP("cv-forge")
 
@@ -102,14 +106,50 @@ TEMPLATE = {
 }
 
 
-def _ensure_container():
-    """Start the CV Forge Docker container if not running."""
+def _get_base_url() -> str:
+    """Return the active base URL, cached after first resolution."""
+    global _base_url
+    if _base_url:
+        return _base_url
+
+    # Environment override
+    env_url = os.environ.get("CV_FORGE_URL", "").strip().rstrip("/")
+    if env_url:
+        _base_url = env_url
+        return _base_url
+
+    # Try local first
     try:
-        r = httpx.get(f"{BASE_URL}/", timeout=3)
+        r = httpx.get(f"{LOCAL_URL}/", timeout=3)
         if r.status_code == 200:
-            return
+            _base_url = LOCAL_URL
+            return _base_url
     except (httpx.ConnectError, httpx.TimeoutException):
         pass
+
+    # Try starting Docker container
+    if _try_start_container():
+        _base_url = LOCAL_URL
+        return _base_url
+
+    # Fall back to remote
+    try:
+        r = httpx.get(f"{REMOTE_URL}/", timeout=5)
+        if r.status_code == 200:
+            _base_url = REMOTE_URL
+            return _base_url
+    except (httpx.ConnectError, httpx.TimeoutException):
+        pass
+
+    raise RuntimeError(
+        "CV Forge unavailable. Install Docker and run: docker pull guidlab/cv-forge"
+    )
+
+
+def _try_start_container() -> bool:
+    """Try to start a local Docker container. Returns True if successful."""
+    if not shutil.which("docker"):
+        return False
 
     result = subprocess.run(
         ["docker", "inspect", "-f", "{{.State.Running}}", CONTAINER_NAME],
@@ -120,32 +160,36 @@ def _ensure_container():
     else:
         start = subprocess.run(["docker", "start", CONTAINER_NAME], capture_output=True)
         if start.returncode != 0:
-            subprocess.run(
-                [
-                    "docker", "run", "-d",
-                    "--name", CONTAINER_NAME,
-                    "-p", "5000:5000",
-                    "--restart", "unless-stopped",
-                    "--memory", "1g",
-                    "--cpus", "1.5",
-                    IMAGE_NAME,
-                ],
-                check=True, capture_output=True,
-            )
+            try:
+                subprocess.run(
+                    [
+                        "docker", "run", "-d",
+                        "--name", CONTAINER_NAME,
+                        "-p", "5000:5000",
+                        "--restart", "unless-stopped",
+                        "--memory", "1g",
+                        "--cpus", "1.5",
+                        IMAGE_NAME,
+                    ],
+                    check=True, capture_output=True,
+                )
+            except (subprocess.CalledProcessError, FileNotFoundError):
+                return False
 
     for _ in range(30):
         try:
-            r = httpx.get(f"{BASE_URL}/", timeout=2)
+            r = httpx.get(f"{LOCAL_URL}/", timeout=2)
             if r.status_code == 200:
-                return
+                return True
         except (httpx.ConnectError, httpx.TimeoutException):
             time.sleep(1)
-    raise RuntimeError("CV Forge container failed to start")
+    return False
 
 
 def _post_load_data(cv_data: dict) -> str:
     """Store CV data on the server and return the editor URL."""
-    r = httpx.post(f"{BASE_URL}/api/load-data", json=cv_data, timeout=10)
+    base = _get_base_url()
+    r = httpx.post(f"{base}/api/load-data", json=cv_data, timeout=10)
     r.raise_for_status()
     return r.json()["url"]
 
@@ -208,9 +252,9 @@ def generate_pdf(cv_data: dict) -> str:
     Args:
         cv_data: Complete CV data dictionary with all sections filled in.
     """
-    _ensure_container()
+    base = _get_base_url()
 
-    r = httpx.post(f"{BASE_URL}/api/generate/ats-pdf", json=cv_data, timeout=30)
+    r = httpx.post(f"{base}/api/generate/ats-pdf", json=cv_data, timeout=30)
     r.raise_for_status()
 
     name = cv_data.get("personal", {}).get("name", "CV").replace(" ", "_")
@@ -244,10 +288,10 @@ def generate_docx(cv_data: dict) -> str:
     Args:
         cv_data: Complete CV data dictionary with all sections filled in.
     """
-    _ensure_container()
+    base = _get_base_url()
 
     r = httpx.post(
-        f"{BASE_URL}/api/generate/docx",
+        f"{base}/api/generate/docx",
         json=cv_data,
         timeout=30,
     )
