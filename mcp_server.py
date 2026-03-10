@@ -26,11 +26,11 @@ TEMPLATE = {
         "title": "",
         "photo": "",
         "contacts": [
-            {"type": "location", "icon": "location", "label": "", "value": "", "link": False},
-            {"type": "email", "icon": "email", "label": "", "value": "", "link": True},
-            {"type": "phone", "icon": "phone", "label": "", "value": "", "link": True},
-            {"type": "linkedin", "icon": "linkedin", "label": "", "value": "", "link": True},
-            {"type": "github", "icon": "github", "label": "", "value": "", "link": True},
+            {"type": "location", "icon": "location", "value": "", "link": False},
+            {"type": "email", "icon": "email", "value": "", "link": True},
+            {"type": "phone", "icon": "phone", "value": "", "link": True},
+            {"type": "linkedin", "icon": "linkedin", "value": "", "link": True},
+            {"type": "github", "icon": "github", "value": "", "link": True},
         ],
     },
     "summary": "",
@@ -93,11 +93,14 @@ TEMPLATE = {
         {"language": "", "level": "", "flag": ""}
     ],
     "section_order": [
-        "summary", "experience", "skills", "projects",
-        "certifications", "education", "courses", "languages",
+        "summary", "experience", "projects",
+        "education", "courses", "certifications", "languages", "skills",
     ],
     "disabled_sections": [],
+    "theme": "sidebar",
     "color_scheme": "navy",
+    "font_preset": "calibri",
+    "heading_color": "black",
     "show_company_logos": True,
     "show_cert_logos": True,
     "show_lang_flags": True,
@@ -314,12 +317,16 @@ def generate_cv(language: str = "en") -> str:
     - bullets: array of achievement/responsibility strings for each position
     - Contact values: use plain text, NOT prefixed with mailto: or tel: schemes
       (e.g. "john@example.com" not "mailto:john@example.com", "+48123456789" not "tel:+48123456789")
-    - Contact types: location, email, phone, linkedin, github, website
+    - Contact types: location (no link), email, phone, linkedin, github, website
     - Flag codes: 2-letter country code (gb, us, de, pl, fr, es, etc.)
-    - Language levels: Native, Fluent, Professional working proficiency, Limited working proficiency, Elementary
+    - Language levels (keys): native, full_professional, professional_working, limited_working, elementary
+      (labels are auto-translated based on cv_language)
     - desc_format: 'bullets' (list) or 'paragraph' (rich_description field)
     - disabled_sections: array of section names to hide (e.g. ['projects', 'courses'])
-    - color_scheme: navy, emerald, charcoal, burgundy, slate, forest, royal, copper
+    - theme: sidebar, topbar, minimal, executive, modern, elegant
+    - color_scheme: navy, ocean, forest, wine, slate, charcoal
+    - font_preset: calibri, helvetica, georgia, garamond, inter, roboto
+    - heading_color: black, auto, navy, graphite, steel, ocean, forest, wine, brown, indigo
 
     Args:
         language: CV language for section headers — en, pl, de, fr, or es.
