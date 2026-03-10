@@ -1,5 +1,8 @@
 # CV Forge MCP Server
 
+[![PyPI](https://img.shields.io/pypi/v/cv-forge-mcp)](https://pypi.org/project/cv-forge-mcp/)
+[![License](https://img.shields.io/badge/license-MIT-brightgreen)](LICENSE)
+
 MCP (Model Context Protocol) server for [CV Forge](https://github.com/Guid-Lab/cv-forge). Lets AI assistants generate professional CVs as PDF/DOCX from conversation data.
 
 ## How It Works
@@ -14,17 +17,14 @@ The MCP server automatically pulls and starts the CV Forge Docker container — 
 ## Requirements
 
 - [Docker](https://docs.docker.com/get-docker/)
-- Python 3.10+
 
-## Installation
+## Quick Start
+
+### Claude Code
 
 ```bash
-git clone https://github.com/Guid-Lab/cv-forge-mcp.git
-cd cv-forge-mcp
-pip install -r requirements.txt
+claude mcp add cv-forge -- uvx cv-forge-mcp
 ```
-
-## Configuration
 
 ### Claude Desktop
 
@@ -34,17 +34,17 @@ Add to `~/.config/claude/claude_desktop_config.json` (Linux) or `~/Library/Appli
 {
   "mcpServers": {
     "cv-forge": {
-      "command": "python",
-      "args": ["/path/to/cv-forge-mcp/mcp_server.py"]
+      "command": "uvx",
+      "args": ["cv-forge-mcp"]
     }
   }
 }
 ```
 
-### Claude Code
+### Manual install (alternative)
 
 ```bash
-claude mcp add cv-forge python /path/to/cv-forge-mcp/mcp_server.py
+pip install cv-forge-mcp
 ```
 
 ## Available Tools

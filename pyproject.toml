@@ -1,0 +1,33 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "cv-forge-mcp"
+version = "1.0.0"
+description = "MCP server for AI-driven CV generation — PDF/DOCX export with visual editor"
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.10"
+authors = [{ name = "Guid Lab" }]
+keywords = ["mcp", "cv", "resume", "pdf", "docx"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+]
+dependencies = [
+    "mcp[cli]>=1.0.0",
+    "httpx>=0.27",
+]
+
+[project.scripts]
+cv-forge-mcp = "mcp_server:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["."]
+only-include = ["mcp_server.py"]
+
+[project.urls]
+Homepage = "https://github.com/Guid-Lab/cv-forge-mcp"
+Repository = "https://github.com/Guid-Lab/cv-forge-mcp"

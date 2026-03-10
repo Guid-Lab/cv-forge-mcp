@@ -267,5 +267,8 @@ def generate_docx(cv_data: dict) -> str:
     })
 
 
-if __name__ == "__main__":
+def main():
     mcp.run()
+
+if __name__ == "__main__":
+    main()
