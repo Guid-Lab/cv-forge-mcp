@@ -2,6 +2,10 @@
 
 MCP (Model Context Protocol) server for [CV Forge](https://github.com/Guid-Lab/cv-forge). Lets AI assistants generate professional CVs as PDF/DOCX from conversation data.
 
+<a href="https://glama.ai/mcp/servers/Guid-Lab/cv-forge-mcp">
+  <img width="380" height="200" src="https://glama.ai/mcp/servers/Guid-Lab/cv-forge-mcp/badge" alt="cv-forge-mcp MCP server" />
+</a>
+
 ## How It Works
 
 1. You describe your experience to the AI (or paste LinkedIn profile text)
