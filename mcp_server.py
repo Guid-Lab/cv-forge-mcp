@@ -10,7 +10,7 @@ import time
 import httpx
 from mcp.server.mcpserver import MCPServer
 
-__version__ = "1.4.0"
+__version__ = "1.5.0"
 
 CONTAINER_NAME = "cv-forge"
 IMAGE_NAME = "guidlab/cv-forge"
@@ -82,6 +82,7 @@ TEMPLATE = {
         {
             "name": "",
             "url": "",
+            "logo": "",
             "role": "",
             "date_from": "Month YYYY",
             "date_to": "Present",
@@ -307,10 +308,10 @@ def generate_cv(language: str = "en") -> str:
     Do NOT generate a CV with placeholder or empty fields. Ask follow-up questions
     for any missing critical sections (at minimum: personal info, experience, education, skills).
 
-    IMPORTANT: Always fill in URLs for employers, education institutions, and certification issuers.
-    Use their official website URLs (e.g. url: "https://www.google.com" for Google,
-    issuer_url: "https://www.offensive-security.com" for OffSec). The editor uses these URLs
-    to automatically fetch company/institution logos.
+    IMPORTANT: Always fill in URLs for employers, education institutions, certification
+    issuers and projects. Use their official website URLs (e.g. url: "https://www.google.com"
+    for Google, issuer_url: "https://www.offensive-security.com" for OffSec). The editor uses
+    these URLs to automatically fetch company/institution logos.
 
     Template field reference:
     - Dates: 'Month YYYY' format (e.g. 'January 2023'), use 'Present' for current positions
@@ -324,6 +325,8 @@ def generate_cv(language: str = "en") -> str:
     - Language levels (keys): native, full_professional, professional_working, limited_working, elementary
       (labels are auto-translated based on cv_language)
     - desc_format: 'bullets' (list) or 'paragraph' (rich_description field)
+    - logo: leave empty; it is optional and filled in from the entry URL in the editor.
+      Employer groups, education entries, certification issuers and projects all take one
     - disabled_sections: array of section names to hide (e.g. ['projects', 'courses'])
     - theme: sidebar, topbar, minimal, executive, modern, elegant
     - color_scheme: navy, ocean, forest, wine, slate, charcoal
