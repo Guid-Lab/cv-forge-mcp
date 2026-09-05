@@ -10,7 +10,7 @@ import time
 import httpx
 from mcp.server.mcpserver import MCPServer
 
-__version__ = "1.5.0"
+__version__ = "1.6.0"
 
 CONTAINER_NAME = "cv-forge"
 IMAGE_NAME = "guidlab/cv-forge"
@@ -75,7 +75,7 @@ TEMPLATE = {
             "issuer": "",
             "issuer_url": "",
             "logo": "",
-            "items": [{"name": "", "url": ""}],
+            "items": [{"name": "", "url": "", "date_issued": "Month YYYY", "date_expires": ""}],
         }
     ],
     "projects": [
@@ -320,6 +320,8 @@ def generate_cv(language: str = "en") -> str:
     - bullets: array of achievement/responsibility strings for each position
     - Contact values: use plain text, NOT prefixed with mailto: or tel: schemes
       (e.g. "john@example.com" not "mailto:john@example.com", "+48123456789" not "tel:+48123456789")
+    - Certification items: date_issued is when it was earned, date_expires is optional
+      and an empty value means the certificate does not expire
     - Contact types: location (no link), email, phone, linkedin, github, website
     - Flag codes: 2-letter country code (gb, us, de, pl, fr, es, etc.)
     - Language levels (keys): native, full_professional, professional_working, limited_working, elementary
