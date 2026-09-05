@@ -10,7 +10,7 @@ import time
 import httpx
 from mcp.server.mcpserver import MCPServer
 
-__version__ = "1.6.0"
+__version__ = "1.7.0"
 
 CONTAINER_NAME = "cv-forge"
 IMAGE_NAME = "guidlab/cv-forge"
@@ -133,12 +133,19 @@ def _check_environment() -> dict:
         if result.returncode == 0 and result.stdout.strip():
             info["docker_image"] = True
 
-    try:
-        r = httpx.get(f"{REMOTE_URL}/", timeout=5)
-        if r.status_code == 200:
-            info["remote"] = True
-    except (httpx.ConnectError, httpx.TimeoutException):
-        pass
+    # The hosted demo may be scaled to zero, in which case the first request
+    # pays for the machine booting. Probe quickly, then once more with patience
+    # before deciding it is down.
+    for timeout in (5, 20):
+        try:
+            r = httpx.get(f"{REMOTE_URL}/", timeout=timeout)
+            if r.status_code == 200:
+                info["remote"] = True
+            break
+        except httpx.TimeoutException:
+            continue
+        except httpx.ConnectError:
+            break
 
     return info
 
