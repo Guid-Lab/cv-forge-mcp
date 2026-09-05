@@ -8,7 +8,9 @@ import tempfile
 import time
 
 import httpx
-from mcp.server.fastmcp import FastMCP
+from mcp.server.mcpserver import MCPServer
+
+__version__ = "1.4.0"
 
 CONTAINER_NAME = "cv-forge"
 IMAGE_NAME = "guidlab/cv-forge"
@@ -18,7 +20,7 @@ REMOTE_URL = "https://cv.guidlab.pl"
 _base_url: str | None = None
 _mode: str | None = None  # "local", "remote", or None (not yet chosen)
 
-mcp = FastMCP("cv-forge")
+mcp = MCPServer("cv-forge", version=__version__)
 
 TEMPLATE = {
     "personal": {
