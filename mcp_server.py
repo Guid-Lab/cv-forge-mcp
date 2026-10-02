@@ -10,7 +10,7 @@ import time
 import httpx
 from mcp.server.mcpserver import MCPServer
 
-__version__ = "1.4.0"
+__version__ = "1.7.0"
 
 CONTAINER_NAME = "cv-forge"
 IMAGE_NAME = "guidlab/cv-forge"
@@ -75,13 +75,14 @@ TEMPLATE = {
             "issuer": "",
             "issuer_url": "",
             "logo": "",
-            "items": [{"name": "", "url": ""}],
+            "items": [{"name": "", "url": "", "date_issued": "Month YYYY", "date_expires": ""}],
         }
     ],
     "projects": [
         {
             "name": "",
             "url": "",
+            "logo": "",
             "role": "",
             "date_from": "Month YYYY",
             "date_to": "Present",
@@ -132,12 +133,19 @@ def _check_environment() -> dict:
         if result.returncode == 0 and result.stdout.strip():
             info["docker_image"] = True
 
-    try:
-        r = httpx.get(f"{REMOTE_URL}/", timeout=5)
-        if r.status_code == 200:
-            info["remote"] = True
-    except (httpx.ConnectError, httpx.TimeoutException):
-        pass
+    # The hosted demo may be scaled to zero, in which case the first request
+    # pays for the machine booting. Probe quickly, then once more with patience
+    # before deciding it is down.
+    for timeout in (5, 20):
+        try:
+            r = httpx.get(f"{REMOTE_URL}/", timeout=timeout)
+            if r.status_code == 200:
+                info["remote"] = True
+            break
+        except httpx.TimeoutException:
+            continue
+        except httpx.ConnectError:
+            break
 
     return info
 
@@ -307,10 +315,10 @@ def generate_cv(language: str = "en") -> str:
     Do NOT generate a CV with placeholder or empty fields. Ask follow-up questions
     for any missing critical sections (at minimum: personal info, experience, education, skills).
 
-    IMPORTANT: Always fill in URLs for employers, education institutions, and certification issuers.
-    Use their official website URLs (e.g. url: "https://www.google.com" for Google,
-    issuer_url: "https://www.offensive-security.com" for OffSec). The editor uses these URLs
-    to automatically fetch company/institution logos.
+    IMPORTANT: Always fill in URLs for employers, education institutions, certification
+    issuers and projects. Use their official website URLs (e.g. url: "https://www.google.com"
+    for Google, issuer_url: "https://www.offensive-security.com" for OffSec). The editor uses
+    these URLs to automatically fetch company/institution logos.
 
     Template field reference:
     - Dates: 'Month YYYY' format (e.g. 'January 2023'), use 'Present' for current positions
@@ -319,11 +327,15 @@ def generate_cv(language: str = "en") -> str:
     - bullets: array of achievement/responsibility strings for each position
     - Contact values: use plain text, NOT prefixed with mailto: or tel: schemes
       (e.g. "john@example.com" not "mailto:john@example.com", "+48123456789" not "tel:+48123456789")
+    - Certification items: date_issued is when it was earned, date_expires is optional
+      and an empty value means the certificate does not expire
     - Contact types: location (no link), email, phone, linkedin, github, website
     - Flag codes: 2-letter country code (gb, us, de, pl, fr, es, etc.)
     - Language levels (keys): native, full_professional, professional_working, limited_working, elementary
       (labels are auto-translated based on cv_language)
     - desc_format: 'bullets' (list) or 'paragraph' (rich_description field)
+    - logo: leave empty; it is optional and filled in from the entry URL in the editor.
+      Employer groups, education entries, certification issuers and projects all take one
     - disabled_sections: array of section names to hide (e.g. ['projects', 'courses'])
     - theme: sidebar, topbar, minimal, executive, modern, elegant
     - color_scheme: navy, ocean, forest, wine, slate, charcoal
